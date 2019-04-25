@@ -21,7 +21,7 @@
 using namespace std;
 using namespace wscDrone;
 extern vector<shared_ptr<Bebop2>>     g_drones;
-extern vector<unique_ptr<mutex>>      g_bufferGuards;
+//extern vector<unique_ptr<mutex>>      g_bufferGuards;
 extern vector<shared_ptr<VideoFrame>> g_frames;
 using namespace cv;
 
@@ -133,7 +133,8 @@ std::shared_ptr<std::thread> VideoFrameOpenCV::launchDisplayThread()
             {
             	// Loop through each drone
                 for (unsigned droneId=0; droneId<g_drones.size(); droneId++) {
-                    std::lock_guard<std::mutex> lock(*g_bufferGuards[droneId]); // lock the image buffer while rendering (reading) it
+                    //std::lock_guard<std::mutex> lock(*g_bufferGuards[droneId]); // lock the image buffer while rendering (reading) it
+                    lock_guard<mutex> lock(*(g_drones[droneId]->getVideoDriver()->getBufferMutex()));
 
                     //-- Prepare the new frame
                     // Step 1 - Get the underlying OpenCV frame from the Video Frame Class
