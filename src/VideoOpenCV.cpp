@@ -68,7 +68,7 @@ void openCVProcessing(Mat &inputImage)
 
 }
 
-void openCVKeyCallbacks(const int key)
+void openCVKeyCallbacks(const int key, unsigned int *focusDrone)
 {
     switch(key) {
     case 32:   // spacebar - LAND ALL DRONES
@@ -79,18 +79,54 @@ void openCVKeyCallbacks(const int key)
         }
         break;
     case 49:   // 1
+        *focusDrone = 0;
         break;
     case 50:   // 2
+        *focusDrone = 1;
         break;
     case 51:   // 3
+        *focusDrone = 2;
         break;
     case 81:   // left arrow
+        {
+            if (*focusDrone < g_drones.size()) {
+
+                g_drones[*focusDrone]->getPilot()->moveDirection(MoveDirection::LEFT);
+            }
+        }
         break;
     case 82:   // up arrow
+        {
+            if (*focusDrone < g_drones.size()) {
+                g_drones[*focusDrone]->getPilot()->moveDirection(MoveDirection::FORWARD);
+            }
+        }
         break;
     case 83:   // right arrow
+        {
+            if (*focusDrone < g_drones.size()) {
+                g_drones[*focusDrone]->getPilot()->moveDirection(MoveDirection::RIGHT);
+            }
+        }
         break;
     case 84:   // down arrow
+        {
+            if (*focusDrone < g_drones.size()) {
+                g_drones[*focusDrone]->getPilot()->moveDirection(MoveDirection::BACK);
+            }
+        }
+        break;
+    case 61:   // +/= key
+    case 43:   // num pad add
+            if (*focusDrone < g_drones.size()) {
+                g_drones[*focusDrone]->getPilot()->moveDirection(MoveDirection::UP);
+            }
+        break;
+    //case 45:   // _/- key ??
+    case 45:   // num pad subtract
+            if (*focusDrone < g_drones.size()) {
+                g_drones[*focusDrone]->getPilot()->moveDirection(MoveDirection::DOWN);
+            }
         break;
     default:
         break;
@@ -107,6 +143,7 @@ std::shared_ptr<std::thread> VideoFrameOpenCV::launchDisplayThread()
         constexpr unsigned SUBWINDOW_WIDTH = 1280/2;
         char myString[250]; // used for text on screen
         int keypress = 0;   // used to capture user key-presses
+        unsigned int focusDrone = 0; // used to indicate which drone is the focus for keyboard commands
 
         // Create a video streamign window. Video will be shown in quadrants, split into four for up to four drones
         namedWindow("VIDEO Streaming", WINDOW_NORMAL);
@@ -170,7 +207,7 @@ std::shared_ptr<std::thread> VideoFrameOpenCV::launchDisplayThread()
             cv::imshow("VIDEO Streaming", streamingImage);
             cv::imshow("PROCESSING", processingImage);
             keypress = cv::waitKey(1);
-            openCVKeyCallbacks(keypress);
+            openCVKeyCallbacks(keypress, &focusDrone);
         }
     }
     );
