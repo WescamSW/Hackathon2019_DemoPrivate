@@ -25,6 +25,8 @@ using namespace cv;
 extern vector<shared_ptr<Bebop2>>     g_drones;
 extern vector<shared_ptr<VideoFrame>> g_frames;
 
+int droneUnderControl = 0;
+
 
 VideoFrameOpenCV::VideoFrameOpenCV(unsigned height, unsigned width)
 : VideoFrame(height, width)
@@ -79,20 +81,55 @@ void openCVKeyCallbacks(const int key)
         }
         break;
     case 49:   // 1
+        droneUnderControl = 0;
         break;
     case 50:   // 2
+        if (g_drones.size() >= 2) {
+            droneUnderControl = 1;
+        }
         break;
     case 51:   // 3
+        if (g_drones.size() >= 3) {
+            droneUnderControl = 2;
+        }
+        break;
+    case 116: // 't'
+        cout << "MANUAL: Taking off!" << endl;
+        g_drones[droneUnderControl]->getPilot()->takeOff();
+        break;
+    case 108: // 't'
+        cout << "MANUAL: Landing!" << endl;
+        g_drones[droneUnderControl]->getPilot()->land();
         break;
     case 81:   // left arrow
+        cout << "MANUAL: Left!" << endl;
+        g_drones[droneUnderControl]->getPilot()->moveDirection(MoveDirection::LEFT);
         break;
-    case 82:   // up arrow
+    case 82:
+        // up arrow
+        cout << "MANUAL: Forward!" << endl;
+        g_drones[droneUnderControl]->getPilot()->moveDirection(MoveDirection::FORWARD);
         break;
     case 83:   // right arrow
+        cout << "MANUAL: Right!" << endl;
+        g_drones[droneUnderControl]->getPilot()->moveDirection(MoveDirection::RIGHT);
         break;
     case 84:   // down arrow
+        cout << "MANUAL: Down!" << endl;
+        g_drones[droneUnderControl]->getPilot()->moveDirection(MoveDirection::BACK);
+        break;
+    case 43: // numeric "+"
+        cout << "MANUAL: Asending!" << endl;
+        g_drones[droneUnderControl]->getPilot()->moveDirection(MoveDirection::UP);
+        break;
+    case 45 : // numeric "-"
+        cout << "MANUAL: Descending!" << endl;
+        g_drones[droneUnderControl]->getPilot()->moveDirection(MoveDirection::DOWN);
         break;
     default:
+        if (key > 0) {
+            cout << "Unknown key pressed: " << key << endl;
+        }
         break;
     }
 }

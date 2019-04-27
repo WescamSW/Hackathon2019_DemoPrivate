@@ -63,14 +63,14 @@ int main(int argc, char **argv)
 
     //Here we can start a thread that will process the video using opencv calls
 
-//    int droneId = 0;
-//
-//    takeoffDrone(droneId);
-//    setFlightAltitude(droneId, 2.5f);
-//    missionTriange(droneId);
-//    missionTriange(droneId);
-//    missionTriange(droneId);
-//    landDrone(droneId);
+    int droneId = 0;
+
+    takeoffDrone(droneId);
+    for (int i=0; i<4; i++) {
+      mission1(droneId);
+    }
+    //waitSeconds(30);
+    landDrone(droneId);
 
     while(true) {}
     exit(0);

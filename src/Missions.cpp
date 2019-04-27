@@ -53,7 +53,7 @@ void takeoffDrone(int droneId) {
     PilotPtr         pilot   = g_drones[droneId]->getPilot();
     VideoDriverPtr   video   = g_drones[droneId]->getVideoDriver();
     g_drones[droneId]->getPilot()->takeOff();
-    waitSeconds(3);
+    //waitSeconds(3);
 }
 
 void landDrone(int droneId)
@@ -61,7 +61,7 @@ void landDrone(int droneId)
     // Mission shutdown
     g_drones[droneId]->getCameraControl()->setForward();
     g_drones[droneId]->getPilot()->land();
-    waitSeconds(5);
+    //waitSeconds(5);
 }
 
 void stopDrone(int droneId)
@@ -90,18 +90,19 @@ void mission1(int droneId)
     CameraControlPtr camera  = g_drones[droneId]->getCameraControl();
     PilotPtr         pilot   = g_drones[droneId]->getPilot();
     VideoDriverPtr   video   = g_drones[droneId]->getVideoDriver();
+//
+//    camera->setTiltPan(17.0f, 45.0f); // Look up and to the right
+//    waitSeconds(5);
+//    camera->setTiltPan(-17.0f, -45.0f); // Look down and to the left
+//    waitSeconds(5);
+//    camera->setForward();
+//    waitSeconds(5);
 
-    waitSeconds(5);
-    camera->setTiltPan(17.0f, 45.0f); // Look up and to the right
-    waitSeconds(5);
-    camera->setTiltPan(-17.0f, -45.0f); // Look down and to the left
-    waitSeconds(5);
-    camera->setForward();
-    waitSeconds(5);
-    pilot->moveRelativeMetres(1.0, 0.00, 0.0); // Move forward 1 metre
-    waitSeconds(5);
-    pilot->moveRelativeMetres(-1.0, 0.0, 0.0); // move backward 1 meter
-    waitSeconds(5);
+    pilot->moveRelativeMetres(2.0, 0.00, 0.0); // Move forward 1 metre
+    pilot->moveRelativeMetres(-2.0, 0.0, 0.0); // move backward 1 meter
+
+    pilot->moveRelativeMetres(0,  2.0, 0.0); // Move forward 1 metre
+    pilot->moveRelativeMetres(0, -2.0, 0.0); // move backward 1 meter
 }
 
 // Move in a 10-metre square pattern, turning such that drone is always facing inwards,
