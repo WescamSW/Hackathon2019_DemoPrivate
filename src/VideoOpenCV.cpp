@@ -20,10 +20,10 @@
 
 using namespace std;
 using namespace wscDrone;
-extern vector<shared_ptr<Bebop2>>     g_drones;
-//extern vector<unique_ptr<mutex>>      g_bufferGuards;
-extern vector<shared_ptr<VideoFrame>> g_frames;
 using namespace cv;
+
+extern vector<shared_ptr<Bebop2>>     g_drones;
+extern vector<shared_ptr<VideoFrame>> g_frames;
 
 
 VideoFrameOpenCV::VideoFrameOpenCV(unsigned height, unsigned width)

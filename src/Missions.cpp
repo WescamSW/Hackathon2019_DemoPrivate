@@ -16,7 +16,6 @@ using namespace std;
 using namespace wscDrone;
 
 // Global variables
-//extern vector<shared_ptr<Semaphore>> g_stateSemaphores;
 extern vector<shared_ptr<Bebop2>> g_drones;
 
 // Create some helpful convenience aliases
@@ -31,21 +30,11 @@ constexpr int WAIT_LONG  = 10;
 
 void startDrone(int droneId)
 {
-    //g_stateSemaphores[droneId] = g_drones[droneId]->getStateSemaphore();
 
     ControlPtr       control = g_drones[droneId]->getDroneController();
     CameraControlPtr camera  = g_drones[droneId]->getCameraControl();
     PilotPtr         pilot   = g_drones[droneId]->getPilot();
     VideoDriverPtr   video   = g_drones[droneId]->getVideoDriver();
-
-//    if (droneId == 0) {
-//        // Register callbacks for the Drone
-//        g_drones[droneId]->registerVideoCallback(onFrameReceived0);
-//    } else if (droneId == 1) {
-//        g_drones[droneId]->registerVideoCallback(onFrameReceived1);
-//    } else if (droneId == 2) {
-//        g_drones[droneId]->registerVideoCallback(onFrameReceived2);
-//    }
 
     control->start();
     cout << "Done CONTROL START" << endl;
@@ -58,7 +47,6 @@ void startDrone(int droneId)
 }
 
 void takeoffDrone(int droneId) {
-    //g_stateSemaphores[droneId] = g_drones[droneId]->getStateSemaphore();
 
     ControlPtr       control = g_drones[droneId]->getDroneController();
     CameraControlPtr camera  = g_drones[droneId]->getCameraControl();

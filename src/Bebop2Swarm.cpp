@@ -18,9 +18,7 @@ using namespace std;
 using namespace wscDrone;
 
 // Global variables
-//vector<shared_ptr<Semaphore>>         g_stateSemaphores;
 vector<shared_ptr<Bebop2>>            g_drones;
-//vector<unique_ptr<mutex>>             g_bufferGuards;
 vector<shared_ptr<VideoFrameGeneric>> g_frames;
 
 /* 
@@ -108,28 +106,20 @@ int main(int argc, char **argv)
 void initDrones(vector<string> callsigns) {
     for (size_t i = 1; i < callsigns.size(); ++i) {
         if (callsigns[i] == "alpha") {
-            //g_stateSemaphores.emplace_back(make_shared<Semaphore>());
-            //g_bufferGuards.emplace_back(make_unique<mutex>());
             g_frames.emplace_back(make_shared<VideoFrameGeneric>(BEBOP2_STREAM_HEIGHT, BEBOP2_STREAM_WIDTH));
             g_drones.emplace_back(make_shared<Bebop2>(Callsign::ALPHA, g_frames[i-1]));
 
         } else if (callsigns [i] == "lone_wolf") {
-            //g_stateSemaphores.emplace_back(make_shared<Semaphore>());
-            //g_bufferGuards.emplace_back(make_unique<mutex>());
         	 g_frames.emplace_back(make_shared<VideoFrameGeneric>(BEBOP2_STREAM_HEIGHT, BEBOP2_STREAM_WIDTH));
             g_drones.emplace_back(make_shared<Bebop2>(Callsign::LONE_WOLF, g_frames[i-1]));
 
 
         } else if (callsigns [i] == "bravo") {
-            //g_stateSemaphores.emplace_back(make_shared<Semaphore>());
-            //g_bufferGuards.emplace_back(make_unique<mutex>());
         	g_frames.emplace_back(make_shared<VideoFrameGeneric>(BEBOP2_STREAM_HEIGHT, BEBOP2_STREAM_WIDTH));
             g_drones.emplace_back(make_shared<Bebop2>(Callsign::BRAVO, g_frames[i-1]));
 
 
         } else if (callsigns [i] == "charlie") {
-            //g_stateSemaphores.emplace_back(make_shared<Semaphore>());
-            //g_bufferGuards.emplace_back(make_unique<mutex>());
         	g_frames.emplace_back(make_shared<VideoFrameGeneric>(BEBOP2_STREAM_HEIGHT, BEBOP2_STREAM_WIDTH));
             g_drones.emplace_back(make_shared<Bebop2>(Callsign::CHARLIE, g_frames[i-1]));
 
