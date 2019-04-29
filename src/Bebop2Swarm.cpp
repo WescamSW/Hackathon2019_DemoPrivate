@@ -64,6 +64,11 @@ int main(int argc, char **argv)
     }
 
     //missionDance();
+    // takeoffDrone(0);
+    // setFlightAltitude(0, 2.5f);
+    // missionTriange(0);
+    // landDrone(0);
+
 
     while(true) {}
     exit(0);
@@ -94,7 +99,7 @@ int main(int argc, char **argv)
     printf("THREADS COMPLETE\n");
     return EXIT_SUCCESS;
 }
- 
+
 
 void initDrones(vector<string> callsigns) {
     for (size_t i = 1; i < callsigns.size(); ++i) {
