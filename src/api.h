@@ -1,5 +1,5 @@
-#ifndef API_H_
-#define API_H_
+#ifndef PY_BEBOP_H_
+#define PY_BEBOP_H_
 
 #include <vector>
 class Api {
@@ -13,6 +13,8 @@ public:
     /// Default destructor
     ~Api() {}
 
+    int count[2];
+
 private:
     void initDrones(int numberOfDrones);
     void startDrone(int droneId);
@@ -21,4 +23,4 @@ private:
     vector<shared_ptr<Bebop2>>            g_drones;
     vector<shared_ptr<VideoFrameGeneric>> g_frames;
 }
-#endif /* API_H_ */
+#endif /* PY_BEBOP_H_ */

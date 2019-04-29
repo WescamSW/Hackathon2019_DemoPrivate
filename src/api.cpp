@@ -5,6 +5,9 @@
  *
  */
 
+#include <cstdio>
+#include "pyBebop.h"
+
 Api::Api(int numberOfDrones)
 {
     init(numberOfDrones);
@@ -13,6 +16,15 @@ Api::Api(int numberOfDrones)
         startDrone(i);
     }
 
+    count[0] = 0;
+    count[1] = 0;
+
+}
+
+void Api:changeCount(int idx, int  value) {
+    count[idx]  = value;
+
+    printf("Changed %d: %d\n", idx, count[idx]);
 }
 
 
