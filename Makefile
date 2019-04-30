@@ -50,8 +50,12 @@ SYS_LIB += -lavcodec -lavformat -lswscale
 SYS_LIB += -lpthread -lrtsp -lsdp -lmux -lpomp -ljson-c -lulog -lfutils
 
 # for opencv
-SYS_INC += -I$(OPENCV)/include/opencv4/ -I$(OPENCV)/include/
-SYS_LIB += -L$(OPENCV)/lib -lopencv_core -lopencv_imgproc -lopencv_highgui -lopencv_dnn -lopencv_videoio
+SYS_INC += `pkg-config opencv --cflags`
+SYS_LIB += `pkg-config opencv --libs`
+#SYS_INC += -I$(OPENCV)/include/opencv4/ -I$(OPENCV)/include/
+#SYS_LIB += -L$(OPENCV)/lib -lopencv_core -lopencv_imgproc -lopencv_highgui -lopencv_dnn -lopencv_videoio
+# For target detection 
+#SYS_LIB += -lopencv_calib3d -lopencv_features2d -lopencv_xfeatures2d -lopencv_imgcodecs
 
 COMMON_SRC = \
       src/VideoFrameOpenCV.cpp \
