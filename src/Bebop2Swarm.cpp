@@ -76,35 +76,27 @@ int main(int argc, char **argv)
         	startDrone(droneId);
     }
 
-    missionDance2();
 
-    if (displayThread.joinable()) { displayThread.join(); }
-    return EXIT_SUCCESS;
-
-
-    std::thread alpha( [&]() {
+    // In order to get drones to do things simaltaneously, they need their own threads.
+    // Both Alpha and Bravo will take off, execute mission1(), then land at the same time.
+    std::thread alphaThread( [&]() {
         takeoffDrone(0);
-        setFlightAltitude(0, 2.5f);
-        waitSeconds(5);
-        missionTriange(0);
-        waitSeconds(5);
+        mission1(0);
         landDrone(0);
     });
 
-    std::thread bravo( [&]() {
-        waitSeconds(5);
+    std::thread bravoThread( [&]() {
         takeoffDrone(1);
-        setFlightAltitude(1, 1.5f);
-        missionTriange(1);
+        mission1(1);
         landDrone(1);
     });
 
 
     // Wait for threads to complete
-    if (alpha.joinable()) { alpha.join(); }
-    if (bravo.joinable()) { bravo.join(); }
+    if (alphaThread.joinable()) { alphaThread.join(); }
+    if (bravoThread.joinable()) { bravoThread.join(); }
 
-    printf("THREADS COMPLETE\n");
+    if (displayThread.joinable()) { displayThread.join(); }
     return EXIT_SUCCESS;
 }
  
