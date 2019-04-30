@@ -10,6 +10,7 @@
  *    much slower than frame rate
  *  - show how to capture keyboard events pressed when one one of the OpenCV windows is active
  */
+#include <cstdlib> // for system()
 #include <unistd.h>
 #include <iostream>
 #include <thread>
@@ -226,6 +227,7 @@ std::thread launchDisplayThread()
     return displayThreadPtr;
 }
 
+
 void openCVKeyCallbacks(const int key)
 {
     switch(key) {
@@ -233,13 +235,39 @@ void openCVKeyCallbacks(const int key)
     case 27 : // ESCAPE key
         shouldExit = true;
         break;
-    case 32:   // spacebar - LAND ALL DRONES
+
+    case 112: // P - Take a picture with the selected drone
+    {
+        cout << "Taking a picture with drone " << droneUnderManualControl << endl;
+        g_drones[droneUnderManualControl]->getCameraControl()->capturePhoto();
+        waitSeconds(1);
+        string ipAddress = g_drones[droneUnderManualControl]->getIpAddress();
+        ostringstream command;
+        command << "wget -r --no-parent -nc -A '*.dng,*.jpg' -P ./drone_" <<  droneUnderManualControl;
+        command << " -nd ftp://" << ipAddress << "/internal_000/Bebop_2/media/";
+        cout << "Sending command: " << command.str() << endl;
+        int ret = system(command.str().c_str()); // Send the command to a shell to execute
+        if (ret != 0) { cout << "ERROR: returned " << ret << endl; }
+        break;
+    }
+
+    case 32 :   // spacebar - LAND ALL DRONES
         {
+            cout << "LANDING ALL DRONES!!!" << endl;
             for (unsigned droneId=0; droneId<g_drones.size(); droneId++) {
                 g_drones[droneId]->getPilot()->land();
             }
         }
         break;
+
+    case 201: // F12 KEY - EMERGENCY MOTOR CUT: THE DRONES WILL FALL!!!!
+        cout << "EMERGENCY MOTOR CUTS!!! DRONES WILL FALL!!!" << endl;
+        for (unsigned droneId=0; droneId<g_drones.size(); droneId++) {
+            //stopDrone(droneId);
+            g_drones[droneId]->getPilot()->CUT_THE_MOTORS();
+        }
+        break;
+
     case 49:   // 1
         droneUnderManualControl = 0;
         break;
