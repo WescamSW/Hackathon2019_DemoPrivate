@@ -1,8 +1,14 @@
 /*
- * Bebop2Demo.cpp
+ * OpenCVWithTX2.cpp
  *
  *  Created on: Feb 1, 2019
  *      Author: slascos
+ *
+ *  This file demonstrate some basic OpenCV processing to achieve the following objectives:
+ *  - have a primary window showing the unprocessed video stream from a camera at frame rate
+ *  - have a secondary window performing OpenCV processing on a second thread, potentially at
+ *    much slower than frame rate
+ *  - show how to capture keyboard events pressed when one one of the OpenCV windows is active
  */
 #include <unistd.h>
 #include <iostream>
@@ -12,12 +18,15 @@
 #include "OpenCVProcessing.h"
 
 using namespace std;
-using namespace cv;
+using cv::Mat;
+using cv::Point;
+using cv::Scalar;
 
 // Global variables
-bool processingDone = true;
+bool processingDone = true; // flag used to indicated when the processing thread is done with a frame
+bool shouldExit = false;     // flag used to indicate the program should exit.
 
-// Function prototype
+// Function prototypes
 std::thread launchDisplayThread();
 void openCVKeyCallbacks(const int key);
 
@@ -45,10 +54,10 @@ std::thread launchDisplayThread()
         int keypress = 0;   // used to capture user key-presses
 
         // Create a video streaming window. To show unprocessed video at full frame rate
-        namedWindow("VIDEO Streaming", WINDOW_AUTOSIZE);
+        cv::namedWindow("VIDEO Streaming", cv::WINDOW_AUTOSIZE);
 
         // Create a second video to display processed video, may not be at full frame rate
-        namedWindow("PROCESSING", WINDOW_AUTOSIZE);
+        cv::namedWindow("PROCESSING", cv::WINDOW_AUTOSIZE);
 
         // Create frames for storing our output images
         Mat streamingImage(WINDOW_HEIGHT, WINDOW_WIDTH, CV_8UC3);
@@ -58,18 +67,20 @@ std::thread launchDisplayThread()
 
         // Create a video capture device
         cout << "Please wait, setting up capture device" << endl;
-        VideoCapture videoCapture(0); // zero means USB camera device 0.
+        cv::VideoCapture videoCapture(0); // zero means USB camera device 0.
 
         // Check if camera opened successfully
         if(!videoCapture.isOpened()){
           cout << "Error opening video stream or file" << endl;
-          return EXIT_FAILURE;
+          return;
         }
-        videoCapture.set(CAP_PROP_FRAME_WIDTH, VIDEO_CAPTURE_WIDTH);
-        videoCapture.set(CAP_PROP_FRAME_HEIGHT, VIDEO_CAPTURE_HEIGHT);
+        videoCapture.set(cv::CAP_PROP_FRAME_WIDTH,  VIDEO_CAPTURE_WIDTH);
+        videoCapture.set(cv::CAP_PROP_FRAME_HEIGHT, VIDEO_CAPTURE_HEIGHT);
         cout << "Done setting up camera" << endl;
 
-        while(true) { // infinite loop
+        Mat grayImage;
+
+        while(!shouldExit) { // loop until request for exit
             constexpr unsigned TEXT_OFFSET_X = 10;
             constexpr unsigned TEXT_OFFSET_Y = 30;
 
@@ -82,29 +93,33 @@ std::thread launchDisplayThread()
 
             	// Scale the captured image to the desired window size
             	Mat scaledImage;
-            	resize(capturedFrame, streamingImage, Size(WINDOW_WIDTH, WINDOW_HEIGHT), 0, 0, INTER_CUBIC);
+            	cv::resize(capturedFrame, streamingImage, cv::Size(WINDOW_WIDTH, WINDOW_HEIGHT), 0, 0, cv::INTER_CUBIC);
 
             	// Put some example text on the streaming image
             	sprintf(myString, "WINDOW SIZE is %d x %d", WINDOW_WIDTH, WINDOW_HEIGHT);
 				cv::putText(streamingImage, myString, Point(
 						TEXT_OFFSET_X,
-						TEXT_OFFSET_Y), FONT_HERSHEY_DUPLEX, 1, Scalar(0,255,0));
+						TEXT_OFFSET_Y), cv::FONT_HERSHEY_DUPLEX, 1, cv::Scalar(0,255,0));
 
                 //-- Perform primary image processing. With complex algorithms, this likely won't be able to keep up
 				// with streaming video so it will run at a lower rate.
 				if (processingDone == true) {  // only start a new frame when the old one is done
+
+				    // First send the processed frame to the display (if it exists)
+		            if (!processingImagePtr->empty()) {
+		                cv::imshow("PROCESSING", *processingImagePtr); // Send the processed image to the window, dereference the pointer to get the Mat object
+		            }
                     processingDone = false;  // clear the flag
-                    *processingImagePtr = capturedFrame; // update to use the newly captured frame
+
+                    // Deep copy the newly capture frame to the processingImage buffer
+                    capturedFrame.copyTo(*processingImagePtr);
+
                     std::thread procThread(openCVProcessing, processingImagePtr, &processingDone); // Launch a new thread
                     procThread.detach(); // you must detach the thread
 				}
             }
 
-            //if (!processingImagePtr->empty()) {
-                cv::imshow("PROCESSING", *processingImagePtr); // Send the processed image to the window, dereference the pointer to get the Mat object
-            //}
             cv::imshow("VIDEO Streaming", streamingImage); // Send the streaming image to the window
-
             keypress = cv::waitKey(1); // update the display
             openCVKeyCallbacks(keypress); // If we want to use keyboard inputs for anything...
         }
@@ -116,6 +131,15 @@ std::thread launchDisplayThread()
 
 void openCVKeyCallbacks(const int key)
 {
+    switch(key) {
+    case 27 : // ESCAPE key
+        shouldExit = true;
+        break;
+    default :
+        if (key >= 0) { // cv::waitKey() returns -1 when no key pressed
+            cout << "Unmapped key pressed: " << key << endl;
+        }
+    }
 
 }
 

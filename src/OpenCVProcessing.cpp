@@ -9,6 +9,16 @@
 using namespace std;
 using namespace cv;
 
+#include "opencv2/calib3d.hpp"
+#include "opencv2/features2d.hpp"
+#include "opencv2/xfeatures2d.hpp"
+//#include "opencv2/core/cuda.hpp"
+//#include "opencv2/cudaimgproc.hpp"
+
+using namespace cv;
+using namespace cv::dnn;
+using namespace cv::xfeatures2d;
+
 void harrisCorner(Mat &grayImage, Mat &outputImage)
 {
     Mat corners, cornersNorm, cornersNormScaled;
@@ -22,21 +32,24 @@ void harrisCorner(Mat &grayImage, Mat &outputImage)
     for (int j = 0; j < cornersNorm.rows; j++) {
         for (int i = 0; i < cornersNorm.cols; i++) {
             if ( (int) cornersNorm.at<float>(j,i) > thresh ) {
-                circle (cornersNormScaled, Point(i,j), 5, Scalar(0), 2, 8, 0);
+                circle (cornersNormScaled, Point(i,j), 5, Scalar(255), 2, 8, 0);
             }
         }
     }
-    outputImage = cornersNormScaled;
+    cornersNormScaled.copyTo(outputImage);
 }
+
 
 void openCVProcessing(shared_ptr<Mat> imageToProcess, bool *processingDone)
 {
     // Convert to grayscale
     Mat grayImage;
-    cvtColor(*imageToProcess, grayImage, COLOR_BGR2GRAY);
+    cv::cvtColor(*imageToProcess, grayImage, COLOR_BGR2GRAY);
 
-    //harrisCorner(grayImage, grayImage);
+    // Show the harris corners in the grayscale image
+    Mat outputImage;
+    harrisCorner(grayImage, outputImage);
+    outputImage.copyTo(*imageToProcess);
 
-    //*imageToProcess = grayImage;
     *processingDone = true;
 }

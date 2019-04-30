@@ -3,6 +3,12 @@
  *
  *  Created on: Feb 1, 2019
  *      Author: slascos
+ *
+ *  This file demonstrate some basic OpenCV processing to achieve the following objectives:
+ *  - have a primary window showing the unprocessed video stream from the dorne at frame rate
+ *  - have a secondary window performing OpenCV processing on a second thread, potentially at
+ *    much slower than frame rate
+ *  - show how to capture keyboard events pressed when one one of the OpenCV windows is active
  */
 #include <cstdlib> // for system()
 #include <unistd.h>
@@ -19,20 +25,27 @@
 using VideoFrameGeneric = VideoFrameOpenCV;
 
 using namespace std;
-using namespace cv;
 using namespace wscDrone;
+
+// 'using' permits us to use things like 'Mat' instead of 'cv::Mat' all the time
+using cv::Mat;
+using cv::Rect;
+using cv::Point;
+using cv::Scalar;
 
 // Global variables
 // We need a vectory of drone instances, and a vector of frame objects for their streaming video
 vector<shared_ptr<Bebop2>>            g_drones;
 vector<shared_ptr<VideoFrameGeneric>> g_frames;
-bool processingDone = true; // flag to track when a frame is done processing
+
+bool processingDone = true;      // flag used to indicated when the processing thread is done with a frame
+bool shouldExit = false;         // flag used to indicate the program should exit.
 int droneUnderManualControl = 0; // selects which drone is controlled manually by the keyboard
 
 // FUNCTION PROTOTYPES
-std::thread launchDisplayThread(); // a function to launch the primary display thread
+std::thread launchDisplayThread();         // a function to launch the primary display thread
 void initDrones(vector<string> callsigns); // Takes in a vector of drone callsigns, and initializes each one
-void openCVKeyCallbacks(const int key);
+void openCVKeyCallbacks(const int key);    // process key presses from the OpenCV window
 
 int main(int argc, char **argv)
 {
@@ -45,11 +58,10 @@ int main(int argc, char **argv)
         exit(EXIT_SUCCESS);
     }
 
-
     vector<string> args(argv, argv + argc); // Determine the requested drones from the command line
     initDrones(args); // Initialize drones
 
-    //Check If any drones were initialized
+    // Check If any drones were initialized
     const int NUM_DRONES = g_drones.size();
     if (NUM_DRONES < 1) {
         std::cout << "No valid drones callsigns provided" << endl;
@@ -64,35 +76,27 @@ int main(int argc, char **argv)
         	startDrone(droneId);
     }
 
-    //missionDance();
 
-    while(true) {}
-    exit(0);
-
-
-    std::thread alpha( [&]() {
+    // In order to get drones to do things simaltaneously, they need their own threads.
+    // Both Alpha and Bravo will take off, execute mission1(), then land at the same time.
+    std::thread alphaThread( [&]() {
         takeoffDrone(0);
-        setFlightAltitude(0, 2.5f);
-        waitSeconds(5);
-        missionTriange(0);
-        waitSeconds(5);
+        mission1(0);
         landDrone(0);
     });
 
-    std::thread bravo( [&]() {
-        waitSeconds(5);
+    std::thread bravoThread( [&]() {
         takeoffDrone(1);
-        setFlightAltitude(1, 1.5f);
-        missionTriange(1);
+        mission1(1);
         landDrone(1);
     });
 
 
     // Wait for threads to complete
-    if (alpha.joinable()) { alpha.join(); }
-    if (bravo.joinable()) { bravo.join(); }
+    if (alphaThread.joinable()) { alphaThread.join(); }
+    if (bravoThread.joinable()) { bravoThread.join(); }
 
-    printf("THREADS COMPLETE\n");
+    if (displayThread.joinable()) { displayThread.join(); }
     return EXIT_SUCCESS;
 }
  
@@ -121,7 +125,12 @@ void initDrones(vector<string> callsigns) {
     }
 }
 
-// Create a function to launch the display thread
+// Create a function to launch the display thread. This will create two windows:
+// 1) PRIMARY STREAMING WINDOW
+//    - this divides the screen into quadrants and renders video from each drone into one of the quadrants
+// 2) PROCESSING WINDOW
+//    - this window is used to display processed video, information, etc. Processing is done on a separate thread
+//      since it may be much slower than frame rate.
 std::thread launchDisplayThread()
 {
     std::thread displayThreadPtr = std::thread([]()
@@ -133,11 +142,11 @@ std::thread launchDisplayThread()
         int keypress = 0;   // used to capture user key-presses
 
         // Create a video streamign window. Video will be shown in quadrants, split into four for up to four drones
-        namedWindow("VIDEO Streaming", WINDOW_NORMAL);
-        resizeWindow("VIDEO Streaming", 2*SUBWINDOW_WIDTH, 2*SUBWINDOW_HEIGHT);
+        cv::namedWindow("VIDEO Streaming", cv::WINDOW_NORMAL);
+        cv::resizeWindow("VIDEO Streaming", 2*SUBWINDOW_WIDTH, 2*SUBWINDOW_HEIGHT);
 
         // Create a second video to display video processing related stuff
-        namedWindow("PROCESSING", WINDOW_AUTOSIZE);
+        cv::namedWindow("PROCESSING", cv::WINDOW_AUTOSIZE);
 
         // Create frames for storing our output images
         Mat streamingImage(2*SUBWINDOW_HEIGHT, 2*SUBWINDOW_WIDTH, CV_8UC3);
@@ -149,7 +158,7 @@ std::thread launchDisplayThread()
                              Rect(0, SUBWINDOW_HEIGHT, SUBWINDOW_WIDTH, SUBWINDOW_HEIGHT),
                              Rect(SUBWINDOW_WIDTH, SUBWINDOW_HEIGHT, SUBWINDOW_WIDTH, SUBWINDOW_HEIGHT)};
 
-        while(true) {
+        while(!shouldExit) {
             constexpr unsigned OFFSET_X = 10;
             constexpr unsigned OFFSET_Y = 30;
 
@@ -157,21 +166,20 @@ std::thread launchDisplayThread()
             {
                 // Loop through each drone
                 for (unsigned droneId=0; droneId<g_drones.size(); droneId++) {
-                    //std::lock_guard<std::mutex> lock(*g_bufferGuards[droneId]); // lock the image buffer while rendering (reading) it
-                    lock_guard<mutex> lock(*(g_drones[droneId]->getVideoDriver()->getBufferMutex()));
+                    lock_guard<mutex> lock(*(g_drones[droneId]->getVideoDriver()->getBufferMutex())); // lock the image buffer while rendering (reading) it
 
                     //-- Prepare the new frame
-                    // Step 1 - Get the underlying OpenCV frame from the Video Frame Class
+                    // Step 1 - Get the underlying OpenCV frame from the VideoFrameOpenCV Class
                     shared_ptr<Mat> frame = (dynamic_pointer_cast<VideoFrameOpenCV>(g_frames[droneId]))->getFrame();
 
-                    // Step 2 - Convert the image from RGB to BGR
+                    // Step 2 - Convert the image from drone form RGB to BGR
                     Mat imageBGR;
-                    cvtColor(*frame, imageBGR, COLOR_RGB2BGR); // convert for OpenCV BGR display
+                    cv::cvtColor(*frame, imageBGR, cv::COLOR_RGB2BGR); // convert for OpenCV BGR display
 
                     //-- Scale the video frame to fit in the STREAMING window
                     // Step 3 - Rescale to fit multiple drones in the window
                     Mat scaledImage;
-                    resize(imageBGR, scaledImage, Size(SUBWINDOW_WIDTH, SUBWINDOW_HEIGHT), 0, 0, INTER_CUBIC);
+                    cv::resize(imageBGR, scaledImage, cv::Size(SUBWINDOW_WIDTH, SUBWINDOW_HEIGHT), 0, 0, cv::INTER_CUBIC);
                     Mat subView = streamingImage(subWindow[droneId]);
                     scaledImage.copyTo(subView);
 
@@ -180,17 +188,21 @@ std::thread launchDisplayThread()
                     sprintf(myString, "Bat: %d", g_drones[droneId]->getBatteryLevel());
                     cv::putText(streamingImage, myString, Point(
                             subWindow[droneId].x + OFFSET_X,
-                            subWindow[droneId].y + OFFSET_Y), FONT_HERSHEY_DUPLEX, 1, Scalar(0,255,0));
+                            subWindow[droneId].y + OFFSET_Y), cv::FONT_HERSHEY_DUPLEX, 1, Scalar(0,255,0));
 
                     //-- Perform primary image processing. With complex algorithms, this likely won't be able to keep up
                     // with streaming video so it will run at a lower rate.
                     if (processingDone == true) {  // only start a new frame when the old one is done
 
+                        // First send the processed frame to the display (if it exists)
                         if (!processingImagePtr->empty()) {
-
+                            cv::imshow("PROCESSING", *processingImagePtr); // Send the processed image to the window, dereference the pointer to get the Mat object
                         }
                         processingDone = false;  // clear the flag
-                        *processingImagePtr = imageBGR; // update to use the newly captured frame
+
+                        // Deep copy the new frame to the processingImage buffer
+                        imageBGR.copyTo(*processingImagePtr);
+
                         std::thread procThread(openCVProcessing, processingImagePtr, &processingDone); // Launch a new thread
                         procThread.detach(); // you must detach the thread
                     }
@@ -198,7 +210,6 @@ std::thread launchDisplayThread()
                 }
             }
 
-            cv::imshow("PROCESSING", *processingImagePtr); // Send the processed image to the window, dereference the pointer to get the Mat object
             cv::imshow("VIDEO Streaming", streamingImage);
             keypress = cv::waitKey(1);
             openCVKeyCallbacks(keypress);
@@ -212,6 +223,10 @@ std::thread launchDisplayThread()
 void openCVKeyCallbacks(const int key)
 {
     switch(key) {
+
+    case 27 : // ESCAPE key
+        shouldExit = true;
+        break;
 
     case 112: // P - Take a picture with the selected drone
     {
@@ -227,11 +242,11 @@ void openCVKeyCallbacks(const int key)
         if (ret != 0) { cout << "ERROR: returned " << ret << endl; }
         break;
     }
+
     case 32 :   // spacebar - LAND ALL DRONES
         {
             cout << "LANDING ALL DRONES!!!" << endl;
             for (unsigned droneId=0; droneId<g_drones.size(); droneId++) {
-                //stopDrone(droneId);
                 g_drones[droneId]->getPilot()->land();
             }
         }
